@@ -4,8 +4,6 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
-import { Partida } from '../models/partida.model';
-import { Mensaje } from '../models/mensaje.model';
 
 @Injectable({
   providedIn: 'root'
@@ -49,6 +47,28 @@ export class PartidaService {
       });
     });
   }
+
+
+  // Método para reconectar un jugador
+  reconectarJugador(codigoPartida: string, nombreJugador: string): void {
+    this.socket.emit('reconectar_jugador', { codigo_partida: codigoPartida, nombre_jugador: nombreJugador });
+  }
+
+  // Método para escuchar el estado del juego
+  onEstadoJuego(): Observable<any> {
+    return new Observable(observer => {
+      this.socket.on('estado_juego', (data) => {
+        observer.next(data);
+      });
+
+      // Manejar errores
+      this.socket.on('error', (error) => {
+        observer.error(error);
+      });
+    });
+  }
+
+
   // Método para iniciar una nueva ronda
   iniciarRonda(codigoPartida: string, palabra: string): void {
     this.socket.emit('iniciar_ronda', { codigo_partida: codigoPartida, palabra });

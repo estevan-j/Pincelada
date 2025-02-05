@@ -17,16 +17,9 @@ export class InicioComponent {
   codigoPartida: string | null = null;
 
   constructor(private router: Router, private modalService: ModalService, private partidaService: PartidaService) {
-    this.subscribeToCodigoPartida();
   }
 
   // Método para suscribirse a los cambios en el código de la partida
-  private subscribeToCodigoPartida() {
-    this.modalService.codigoPartida$.subscribe((codigo) => {
-      this.codigoPartida = codigo;
-    });
-  }
-
   // Método para navegar a la página de la partida
   OnNavigateToPartida() {
     if (this.codigoPartida) {
@@ -40,11 +33,9 @@ export class InicioComponent {
   continueGame() {
     this.partidaService.crearPartida(this.username).subscribe({
       next: (response) => {
-        const codigoPartida = response?.partida?.codigo_partida;
-        if (codigoPartida) {
-          this.modalService.setJugadorTurno(this.username);
-          this.modalService.setCodigoPartida(codigoPartida);
-          this.partidaService.unirseASala(codigoPartida, this.username, this.selectedAvatar);
+        this.codigoPartida = response?.partida?.codigo_partida;
+        if (this.codigoPartida) {
+          this.partidaService.unirseASala(this.codigoPartida, this.username, this.selectedAvatar);
           this.OnNavigateToPartida();
         }
       },

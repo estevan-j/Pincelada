@@ -49,8 +49,11 @@ h1 {
 }
 
 .opcion img {
-    max-width: 100%;
-    height: auto;
+    width: 100%;
+    height: 200px;
+    /* Establecer una altura fija */
+    object-fit: cover;
+    /* Asegurarse de que la imagen se ajuste al contenedor */
     border-radius: 4px;
 }
 
@@ -64,6 +67,7 @@ h1 {
     color: #666;
     margin-bottom: 1rem;
 }
+
 
 .opcion button {
     background-color: #007bff;

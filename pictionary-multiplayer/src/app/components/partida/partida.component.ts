@@ -37,15 +37,13 @@ export class PartidaComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private partidaService: PartidaService,
-    private modalService: ModalService
+    private partidaService: PartidaService
   ) { }
 
 
   ngOnInit(): void {
     this.nombreJugador = localStorage.getItem('nombreJugador') || '';
     this.codigoPartida = localStorage.getItem('codigoPartida') || '';
-    this.jugadorTurno = localStorage.getItem('jugadorTurno') || '';
 
     this.route.queryParams.subscribe(params => {
       this.nombreJugador = params['jugador'];
@@ -53,11 +51,30 @@ export class PartidaComponent implements OnInit, OnDestroy {
       localStorage.setItem('nombreJugador', this.nombreJugador);
       localStorage.setItem('codigoPartida', this.codigoPartida);
     });
-    // load anfitrion = dibujante
-    this.modalService.jugadorTurno$.subscribe(nombre => {
-      this.jugadorTurno = nombre || '';
-      localStorage.setItem('jugadorTurno', this.jugadorTurno);
-    });
+
+
+    // Reconectar jugador si la página se recarga
+    if (this.nombreJugador && this.codigoPartida) {
+      this.partidaService.reconectarJugador(this.codigoPartida, this.nombreJugador);
+
+      this.partidaSubscription.add(
+        this.partidaService.onEstadoJuego().subscribe(
+          (data) => {
+            console.log('Estado del juego recibido:', data);
+            this.jugadores = data.lista;
+            this.actualizarJugadorTurno(data.turno);
+            this.rondaActual = data.ronda;
+            this.estadoPartida = data.estado;
+            this.esEditable = this.nombreJugador === this.jugadorTurno;
+            this.mensajes.push(...data.mensajes);
+            // Restaurar otros estados necesarios
+          },
+          (error) => {
+            console.error('Error al recibir el estado del juego:', error);
+          }
+        )
+      );
+    }
 
     this.partidaSubscription.add(
       this.partidaService.escucharFinPartida().subscribe(data => {
@@ -72,6 +89,9 @@ export class PartidaComponent implements OnInit, OnDestroy {
     this.partidaSubscription.add(
       this.partidaService.escucharActualizacionJugadores().subscribe(data => {
         this.jugadores = data.lista;
+        this.actualizarJugadorTurno(data.turno);
+        this.rondaActual = data.ronda;
+        this.esEditable = this.nombreJugador === this.jugadorTurno;
         if (this.nombreJugador !== this.jugadorTurno) {
           this.estadoPartida = data.estado;
         }
@@ -104,9 +124,6 @@ export class PartidaComponent implements OnInit, OnDestroy {
       this.actualizarEstadoPartida(data);
     });
 
-    this.esEditable = this.nombreJugador === this.jugadorTurno;
-    console.log('Jugador: ', this.nombreJugador, ' Jugador Turno: ', this.jugadorTurno, ' Editable: ', this.esEditable);
-
   }
 
   ngOnDestroy(): void {
@@ -118,13 +135,16 @@ export class PartidaComponent implements OnInit, OnDestroy {
     this.estadoPartida = nuevoEstado;
   }
 
+  actualizarJugadorTurno(nuevoJugador: string): void {
+    this.jugadorTurno = nuevoJugador;
+  }
+
 
   private actualizarEstadoPartida(data: any): void {
     const { nombre_jugador, jugadores } = data;
     this.estadoPartida = 'seleccionandoPalabra';
     this.jugadorTurno = nombre_jugador;
     this.jugadores = jugadores;
-    this.modalService.setJugadorTurno(this.jugadorTurno);
     this.palabraAdivinar = 'Intenta Adivinar la Palabra';
   }
 
@@ -152,8 +172,6 @@ export class PartidaComponent implements OnInit, OnDestroy {
     this.estadoPartida = data.estado;
     this.esEditable = this.nombreJugador === this.jugadorTurno;
     this.iniciarTemporizador();
-    console.log('Iniciando ronda', data.dibujante, data.palabra, data.tiempo, data.ronda, data.estado);
-
   }
 
 

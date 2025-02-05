@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS  # Importar CORS
 from palabras import palabras
+import os
 import random
 import time
 
@@ -57,11 +58,17 @@ def crear_partida():
 
     return jsonify({'partida': partidas[codigo_partida]}), 200
 
+@app.route('/imagenes/<path:filename>')
+def serve_image(filename):
+    return send_from_directory(os.path.join(app.root_path, 'imagenes'), filename)
+
+
 @app.route('/palabras', methods=['GET'])
 def get_opciones_palabras_route():
     opciones_palabras = random.sample(palabras, 3)
+    for opcion in opciones_palabras:
+        opcion['imagen'] = request.host_url + 'imagenes/' + opcion['imagen'].split('/')[-1]
     return jsonify({'opciones': opciones_palabras}), 200
-
 
 
 # Ruta para iniciar la partida
@@ -87,6 +94,34 @@ def iniciar_partida():
     partida['ronda_actual'] += 1
     partida['estado'] = 'jugando'
     return jsonify({'mensaje': 'Partida iniciada'}), 200
+
+
+# Evento para manejar la reconexión de un jugador
+@socketio.on('reconectar_jugador')
+def handle_reconnect(data):
+    codigo_partida = data['codigo_partida']
+    nombre_jugador = data['nombre_jugador']
+    
+    if codigo_partida in partidas:
+        partida = partidas[codigo_partida]
+        jugadores = [jugador.nombre for jugador in partida['jugadores']]
+        
+        if nombre_jugador in jugadores:
+            # Enviar el estado actual del juego al jugador reconectado
+            jugadores_serializados = [jugador.__dict__ for jugador in partida['jugadores']]
+            emit('estado_juego', {
+                'lista': jugadores_serializados,
+                'estado': partida['estado'],
+                'turno': partida['turno'],
+                'ronda': partida['ronda_actual'],
+                'mensajes': partida['mensajes'],
+                'dibujo': partida['dibujo']
+            })
+        else:
+            emit('error', {'mensaje': 'Jugador no encontrado en la partida'})
+    else:
+        emit('error', {'mensaje': 'Código de partida inválido'})
+        
 
 @socketio.on('iniciar_ronda')
 def iniciar_ronda(data):
@@ -151,7 +186,7 @@ def unirse_partida_socket(codigo_partida, nombre_jugador, avatar):
     join_room(codigo_partida)  # Unir al jugador a la sala del juego
     # Convertir objetos Jugador a diccionarios
     jugadores_serializados = [jugador.__dict__ for jugador in partida['jugadores']]
-    emit('actualizar_jugadores', {'lista': jugadores_serializados, 'estado': partida['estado']}, room=codigo_partida)
+    emit('actualizar_jugadores', {'lista': jugadores_serializados, 'estado': partida['estado'], 'turno': partida['turno'], 'ronda': partida['ronda_actual']}, room=codigo_partida)
 
 
 
@@ -190,12 +225,12 @@ def adivinar(codigo_partida,nombre, intento ):
         # fin de la ronda
         jugadores = [jugador.__dict__ for jugador in partida['jugadores']]
         if (partida['ronda_actual'] >= partida['rondas']):
+            partida['estado'] = 'finPartida'
             emit('fin_partida', {'mensaje': 'Fin de la partida', "jugadores": jugadores}, room=codigo_partida)
             return
         partida['ronda_actual'] += 1
         partida['turno'] = nombre
         partida['adivinanza'] = intento
-
         emit('mensaje_chat', {'nombre_jugador': nombre, 'mensaje': 'ha adivinado la palabra', "jugadores": jugadores } , room=codigo_partida)
         return 
     
@@ -220,6 +255,7 @@ def temporizador_terminado(data):
 
     jugadores = [jugador.__dict__ for jugador in partida['jugadores']]
     if partida['ronda_actual'] >= partida['rondas']:
+        partida['estado'] = 'finPartida'
         emit('fin_partida', {'mensaje': 'Fin de la partida', "jugadores": jugadores}, room=codigo_partida)
         return
     # Seleccionar el siguiente jugador de manera aleatoria
@@ -231,10 +267,8 @@ def temporizador_terminado(data):
 # Evento que devuelve todo el chat
 @socketio.on('obtener_todo_chat')
 def obtener_todo_chat(codigo_partida):
-
     if codigo_partida not in partidas:
         return
-
     partida = partidas[codigo_partida]
     emit('todo_chat', list(partida['mensajes']) ,room= codigo_partida)
 

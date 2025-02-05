@@ -6,33 +6,32 @@
       <i class="bi bi-alarm" style="font-size: 1.8rem; padding-left: 8px; padding-right: 8px"></i>
       <span>{{ tiempoPorRonda }} s</span>
     </div>
-    <div class="current-word col-4 d-flex justify-content-center">
+    <div class="current-word col-4 d-flex justify-content-center" aria-live="assertive" tabindex="0">
       <span class="word">{{ palabraAdivinar }}</span>
     </div>
     <div class="settings-icon col-4 d-flex justify-content-end">
-      <button class="boton-sin-estilos border-0" (click)="openModal()" aria-label="boton configuracion">
-        <i class="bi bi-gear" style="font-size: 1.8rem"></i>
+      <button class="boton-sin-estilos border-0" (click)="openModal()" aria-label="Abrir configuración"
+        aria-haspopup="dialog">
+        <i class="bi bi-gear" style="font-size: 1.8rem" aria-hidden="true"></i>
       </button>
     </div>
   </div>
+
   <!-- Main Content -->
-  <div class="row mt-1">
+  <div class="row mt-1" role="main">
     <!-- Left Panel: Player List -->
     <div class="col-2 p-0">
-      <div class="panel-left me-1">
+      <div class="panel-left me-1" role="complementary" aria-labelledby="player-list">
+        <h2 id="player-list" class="visually-hidden">Lista de jugadores</h2>
         @for (jugador of jugadores; track $index) {
-        <div class="player-card" [ngClass]="{
-            'mensaje-par': $index % 2 === 0,
-          }">
-          <span> #{{$index+1}} </span>
-
+        <div class="player-card" [ngClass]="{'mensaje-par': $index % 2 === 0}" role="listitem" tabindex="0">
+          <span>#{{$index+1}}</span>
           <div class="name-score">
             <span class="player-name">{{ jugador.nombre }}</span>
             <span class="player-score">{{ jugador.puntaje }}</span>
           </div>
-
           <div>
-            <p class="m-0 fs-2"> {{jugador.avatar}} </p>
+            <p class="m-0 fs-2" aria-hidden="true">{{jugador.avatar}}</p>
           </div>
         </div>
         }
@@ -43,48 +42,47 @@
     <div class="col-8 p-0">
       <div class="center-panel me-1">
         @if (estadoPartida === 'esperando') {
-        <!-- Pantalla de espera -->
-        <app-espera [esEditable]="esEditable" (cambiarEstado)="cambiarEstadoPartida($event)"></app-espera>
-        }@else if (estadoPartida === 'jugando') {
-        <!-- Drawing Area -->
+        <app-espera [esEditable]="esEditable" [nombreJugador]="nombreJugador" [codigoPartida]="codigoPartida"
+          (cambiarEstado)="cambiarEstadoPartida($event)"></app-espera>
+        } @else if (estadoPartida === 'jugando') {
         <app-drawing-area [codigoPartida]="codigoPartida" [esEditable]="esEditable"></app-drawing-area>
-        }@else {
+        } @else {
         <app-resumen [jugadores]="jugadores"></app-resumen>
         }
       </div>
     </div>
 
     <!-- Right Panel: Chat -->
-    <div class=" col-2 p-0">
-      <div class="panel-right">
+    <div class="col-2 p-0">
+      <div class="panel-right" role="complementary">
         <div class="container-right container-fluid p-0">
-          <div class="chat-box">
+          <div class="chat-box" role="log" aria-live="polite" tabindex="0">
             @for (mensaje of mensajes; track $index) {
             <div class="row">
               <div class="col-12 py-2 ps-3" [ngClass]="{
                   'palabra-adivinada': mensaje.mensaje === 'ha adivinado la palabra',
-                  'mensaje-par': $index % 2 === 0,
-              }">
-                @if (mensaje.mensaje === 'ha creado la partida' || mensaje.mensaje === 'ha ingresado a la partida') {
-                <p class="mensaje-ingreso m-0">{{mensaje.nombre_jugador}} {{ mensaje.mensaje }} </p>
-                } @else if(mensaje.mensaje === 'ha adivinado la palabra') {
-                <p class="m-0">{{mensaje.nombre_jugador}} {{ mensaje.mensaje }} </p>
-                }@else if(mensaje.mensaje === 'esta dibujando') {
-                <p class="m-0 text-primary">{{mensaje.nombre_jugador}} {{ mensaje.mensaje }} </p>
-                } @else {
-                <p class="m-0">{{mensaje.nombre_jugador}}: {{ mensaje.mensaje }}</p>
-                }
+                  'mensaje-par': $index % 2 === 0
+                }" role="alert" tabindex="0"
+                [attr.aria-label]="'Mensaje de ' + mensaje.nombre_jugador + ': ' + mensaje.mensaje">
+                <p class="m-0">
+                  <span class="visually-hidden">{{mensaje.nombre_jugador}} dijo:</span>
+                  {{mensaje.nombre_jugador}}: {{ mensaje.mensaje }}
+                </p>
               </div>
             </div>
             }
           </div>
           <div class="row mx-1 mt-1">
             <div class="col-8 p-0">
-              <input type="text" [(ngModel)]="mensajeChat" class="w-100" placeholder="Escribe aquí"
-                [disabled]="esEditable" />
+              <label for="chat-input" class="visually-hidden">Escribir mensaje en el chat</label>
+              <input id="chat-input" type="text" [(ngModel)]="mensajeChat" class="w-100" placeholder="Escribe aquí"
+                [disabled]="esEditable" [attr.aria-disabled]="esEditable" (keydown.enter)="enviarMensajeChat()" />
             </div>
             <div class="col-4 p-0">
-              <button class="w-100" (click)="enviarMensajeChat()" [disabled]="esEditable">Enviar</button>
+              <button class="w-100" (click)="enviarMensajeChat()" [disabled]="esEditable"
+                [attr.aria-disabled]="esEditable">
+                Enviar
+              </button>
             </div>
           </div>
         </div>
@@ -94,16 +92,20 @@
 </div>
 
 <!-- select word page -->
-<div *ngIf="estadoPartida === 'seleccionandoPalabra' &&  nombreJugador == jugadorTurno" class="modal-overlay">
+<div *ngIf="estadoPartida === 'seleccionandoPalabra' && nombreJugador == jugadorTurno" class="modal-overlay"
+  role="dialog" aria-labelledby="select-word-title">
+  <h2 id="select-word-title" class="visually-hidden">Selecciona una palabra</h2>
   <app-select-word-page [nombreJugador]="nombreJugador" [codigoPartida]="codigoPartida"></app-select-word-page>
 </div>
 
 <!-- Reproductor de música de fondo (oculto) -->
 <div>
-  <audio #backgroundAudio src="assets/puzzle-game-bright-casual-video-game-music-249202.mp3"></audio>
+  <audio #backgroundAudio src="assets/puzzle-game-bright-casual-video-game-music-249202.mp3" aria-hidden="true"></audio>
 </div>
 
 <!-- Modal para controlar el volumen -->
-<app-audio-modal *ngIf="isModalOpen" [isMusicPlaying]="isMusicPlaying" [currentVolume]="currentVolume"
-  (close)="closeModal()" (volumeChange)="setVolume($event)" (toggleMusic)="toggleBackgroundMusic($event)">
+<app-audio-modal *ngIf="isModalOpen" role="dialog" aria-labelledby="audio-settings-title"
+  [isMusicPlaying]="isMusicPlaying" [currentVolume]="currentVolume" (close)="closeModal()"
+  (volumeChange)="setVolume($event)" (toggleMusic)="toggleBackgroundMusic($event)">
+  <h2 id="audio-settings-title" class="visually-hidden">Configuración de audio</h2>
 </app-audio-modal>

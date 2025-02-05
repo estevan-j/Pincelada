@@ -13,15 +13,13 @@ import { PartidaService } from '../../services/partida.service';
 export class EsperaComponent implements OnInit {
   @Input() esEditable: boolean = false; // Nueva propiedad para controlar los permisos de edición
   @Output() cambiarEstado = new EventEmitter<string>();
-
-  codigoPartida: string = '';
-  nombreJugador: string = '';
+  @Input() nombreJugador: string = '';
+  @Input() codigoPartida: string = '';
   public formOpciones!: FormGroup;
   modalMessage: string = '';
 
   constructor(
     private _formBuilder: FormBuilder,
-    private modalService: ModalService,
     private partidaService: PartidaService
   ) {
     this.formBuild();
@@ -34,13 +32,7 @@ export class EsperaComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.modalService.codigoPartida$.subscribe(codigo => {
-      this.codigoPartida = codigo || '';
-    });
-
-    this.modalService.jugadorTurno$.subscribe(nombre => {
-      this.nombreJugador = nombre || '';
-    });
+    this.updateFormControls();
   }
 
   private formBuild() {

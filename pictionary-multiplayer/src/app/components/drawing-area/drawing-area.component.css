@@ -6,7 +6,7 @@
     justify-content: center;
     padding: 8px;
     border-radius: 8px;
-    border: 2px solid #444;
+    border: 2px solid var(--dark-bg);
 }
 
 canvas {
